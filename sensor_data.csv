@@ -1,0 +1,4 @@
+timestamp,location,pH,humidity,temperature,conductivity,nitrogen,phosphorus,potassium
+1699990000,1,6.5,45,22.5,300,10,15,20
+1699990060,2,6.6,44,22.7,310,11,14,19
+1699990120,3,6.4,46,22.4,320,9,16,21
