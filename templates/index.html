@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Greenhouse Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,36 +24,127 @@
             background: #fff;
             display: none;
         }
+        .info-box span.interactive {
+            color: blue;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+        #chart-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background: #fff;
+            border: 1px solid #333;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            max-width: 90%;
+            max-height: 80%;
+            overflow: auto;
+        }
+        #data-chart {
+            width: 100%;
+            height: 100%;
+            max-width: 700px;
+            max-height: 500px;
+            margin: auto;
+        }
+        #close-modal {
+            display: block;
+            margin: 20px auto 0;
+            padding: 10px 20px;
+            border: none;
+            background: #333;
+            color: #fff;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <h1>Greenhouse Visualization</h1>
     <canvas id="greenhouse" width="600" height="400"></canvas>
     <div class="info-box" id="info-box"></div>
+
+    <!-- Modal for data chart -->
+    <div id="chart-modal">
+        <canvas id="data-chart" style="width: 500px; height: 200px;"></canvas>
+        <button id="close-modal">Close</button>
+    </div>
+
     <script>
         const canvas = document.getElementById('greenhouse');
         const ctx = canvas.getContext('2d');
         const infoBox = document.getElementById('info-box');
+        const chartModal = document.getElementById('chart-modal');
+        const dataChartCanvas = document.getElementById('data-chart');
+        const closeModal = document.getElementById('close-modal');
+        let dataChart;
 
-        // Data passed from Flask (injection points)
+        // Data passed from Flask
         const injectionPoints = {{ injection_points|tojson }};
+        const historicalData = {{ historical_data|tojson }};
 
-        // Greenhouse dimensions
+        // Define ranges
+        const optimalRanges = {
+            pH: { min: 6.0, max: 7.5 },
+            humidity: { min: 40, max: 60 },
+            temperature: { min: 20, max: 30 },
+            conductivity: { min: 1000, max: 2000 },
+            nitrogen: { min: 240, max: 480 },
+            phosphorus: { min: 11, max: 22 },
+            potassium: { min: 110, max: 280 }
+        };
+
+        const intermediateRanges = {
+            pH: { min: 5.5, max: 8.0 },
+            humidity: { min: 35, max: 65 },
+            temperature: { min: 15, max: 35 },
+            conductivity: { min: 500, max: 2500 },
+            nitrogen: { min: 200, max: 520 },
+            phosphorus: { min: 8, max: 25 },
+            potassium: { min: 80, max: 300 }
+        };
+
+        // Function to determine status color
+        function determineStatus(point) {
+            let outsideIntermediate = false;
+            let withinOptimal = true;
+
+            Object.keys(optimalRanges).forEach(key => {
+                const value = point[key];
+                const optimal = optimalRanges[key];
+                const intermediate = intermediateRanges[key];
+
+                if (value < intermediate.min || value > intermediate.max) {
+                    outsideIntermediate = true;
+                }
+                if (value < optimal.min || value > optimal.max) {
+                    withinOptimal = false;
+                }
+            });
+
+            if (outsideIntermediate) return 'red';
+            if (withinOptimal) return 'green';
+            return 'white';
+        }
+
+        // Draw greenhouse
         const greenhouseWidth = canvas.width;
         const greenhouseHeight = canvas.height;
-        const rowHeight = greenhouseHeight / 5; // 5 rows
-        const padding = 50; // Padding for the path
+        const rowHeight = greenhouseHeight / 5;
+        const padding = 50;
 
-        // Draw alternating green and brown strips
         for (let i = 0; i < 5; i++) {
-            ctx.fillStyle = i % 2 === 0 ? '#8fbf8f' : '#c2b280'; // Green or brown
+            ctx.fillStyle = i % 2 === 0 ? '#8fbf8f' : '#c2b280';
             ctx.fillRect(0, i * rowHeight, greenhouseWidth, rowHeight);
         }
 
-        // Zigzag path
+        // Draw path
         const path = [];
         for (let i = 0; i < 5; i++) {
-            const y = i * rowHeight + rowHeight / 2; // Center of each row
+            const y = i * rowHeight + rowHeight / 2;
             if (i % 2 === 0) {
                 path.push({ x: padding, y });
                 path.push({ x: greenhouseWidth - padding, y });
@@ -62,7 +154,6 @@
             }
         }
 
-        // Draw the path
         ctx.strokeStyle = 'yellow';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -71,9 +162,8 @@
             ctx.lineTo(path[i].x, path[i].y);
         }
         ctx.stroke();
-
         // Draw start and end points
-        ctx.fillStyle = 'white'; // Start point
+        ctx.fillStyle = 'gray'; // Start point
         ctx.beginPath();
         ctx.arc(path[0].x, path[0].y, 10, 0, Math.PI * 2);
         ctx.fill();
@@ -85,26 +175,23 @@
         ctx.arc(path[path.length - 1].x, path[path.length - 1].y, 10, 0, Math.PI * 2);
         ctx.fill();
         ctx.stroke();
-
-        // Add injection points near the beginning and end of rows
-        let index = 0;
+        // Draw injection points
         injectionPoints.forEach((point, i) => {
             const rowIndex = Math.floor(i / 2);
             const y = rowIndex * rowHeight + rowHeight / 2;
             const x = i % 2 === 0 ? padding + 120 : greenhouseWidth - padding - 120;
 
-            // Draw point
-            ctx.fillStyle = 'blue';
+            const statusColor = determineStatus(point);
+
+            ctx.fillStyle = statusColor;
             ctx.beginPath();
             ctx.arc(x, y, 10, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
 
-            // Label the point
             ctx.fillStyle = 'black';
             ctx.fillText(point.label, x - 10, y - 15);
 
-            // Add interactivity
             point.x = x;
             point.y = y;
         });
@@ -122,18 +209,56 @@
                     infoBox.style.display = 'block';
                     infoBox.innerHTML = `
                         <strong>Data for ${point.label}:</strong><br>
-                        pH: ${point.pH}<br>
-                        Humidity: ${point.humidity}%<br>
-                        Temperature: ${point.temperature}°C<br>
-                        Conductivity: ${point.conductivity} µS/cm<br>
-                        Nitrogen: ${point.nitrogen} mg/kg<br>
-                        Phosphorus: ${point.phosphorus} mg/kg<br>
-                        Potassium: ${point.potassium} mg/kg
+                        <span class="interactive" data-type="pH">pH: ${point.pH}</span><br>
+                        <span class="interactive" data-type="humidity">Humidity: ${point.humidity}%</span><br>
+                        <span class="interactive" data-type="temperature">Temperature: ${point.temperature}°C</span><br>
+                        <span class="interactive" data-type="conductivity">Conductivity: ${point.conductivity} µS/cm</span><br>
+                        <span class="interactive" data-type="nitrogen">Nitrogen: ${point.nitrogen} mg/kg</span><br>
+                        <span class="interactive" data-type="phosphorus">Phosphorus: ${point.phosphorus} mg/kg</span><br>
+                        <span class="interactive" data-type="potassium">Potassium: ${point.potassium} mg/kg</span>
                     `;
+
+                    document.querySelectorAll('.interactive').forEach(element => {
+                        element.addEventListener('click', () => {
+                            const dataType = element.getAttribute('data-type');
+                            showChart(point.label, dataType);
+                        });
+                    });
                 }
             });
+        });
+
+        function showChart(label, type) {
+            const data = historicalData[label].map(entry => entry[type]);
+            const labels = historicalData[label].map(entry =>
+                new Date(entry.timestamp * 1000).toLocaleDateString()
+            );
+
+            if (dataChart) dataChart.destroy();
+
+            dataChart = new Chart(dataChartCanvas, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `${type} values for ${label}`,
+                        data: data,
+                        borderColor: 'blue',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                }
+            });
+
+            chartModal.style.display = 'block';
+        }
+
+        closeModal.addEventListener('click', () => {
+            chartModal.style.display = 'none';
         });
     </script>
 </body>
 </html>
-
