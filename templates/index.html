@@ -59,310 +59,414 @@
             background: #333;
             color: #fff;
             cursor: pointer;
+
+            
         }
     </style>
 </head>
-<body>
-    <h1>Greenhouse Visualization</h1>
-    <canvas id="greenhouse" width="600" height="400"></canvas>
-    <div class="info-box" id="info-box"></div>
+    <body>
+        <h1>Greenhouse Visualization</h1>
+        <canvas id="greenhouse" width="600" height="400"></canvas>
+        <div class="info-box" id="info-box"></div>
 
-    <!-- Modal for the Report -->
-    <div id="report-modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: #e6e6e6; border: 1px solid #333; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); width: 400px; max-width: 90%; text-align: left;">
-        <div id="report-content"></div>
-        <button style="margin-top: 20px; padding: 10px 20px; border: none; background: #00b95d; color: #fff; cursor: pointer;" onclick="closeReportModal()">Close</button>
-    </div>
+        <!-- Modal for the Report -->
+        <div id="report-modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: #e6e6e6; border: 1px solid #333; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); width: 400px; max-width: 90%; text-align: left;">
+            <div id="report-content"></div>
+            <button style="margin-top: 20px; padding: 10px 20px; border: none; background: #00b95d; color: #fff; cursor: pointer;" onclick="closeReportModal()">Close</button>
+        </div>
 
-    <!-- Modal for data chart -->
-    <div id="chart-modal">
-        <canvas id="data-chart" style="width: 500px; height: 200px;"></canvas>
-        <button id="close-modal">Close</button>
-    </div>
+        <!-- Modal for data chart -->
+        <div id="chart-modal">
+            <canvas id="data-chart" style="width: 500px; height: 200px;"></canvas>
+            <button id="close-modal">Close</button>
+        </div>
 
-    <script>
-        const canvas = document.getElementById('greenhouse');
-        const ctx = canvas.getContext('2d');
-        const infoBox = document.getElementById('info-box');
-        const chartModal = document.getElementById('chart-modal');
-        const dataChartCanvas = document.getElementById('data-chart');
-        const closeModal = document.getElementById('close-modal');
-        let dataChart;
+        
+        <!-- Question Mark Button -->
+        <button id="help-button" style="
+            position: fixed; 
+            bottom: 20px; 
+            right: 20px; 
+            width: 50px; 
+            height: 50px; 
+            background-color: #059100; 
+            color: white; 
+            border: none; 
+            border-radius: 50%; 
+            font-size: 30px; 
+            cursor: pointer;
+        ">?</button>
+        <div id="ranges-popup" style="
+            display: none; 
+            position: fixed; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 1000; 
+            background: #fff; 
+            border: 1px solid #333; 
+            padding: 20px; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); 
+            width: 80%; 
+            max-width: 700px; 
+            max-height: 80%; 
+            overflow: auto;
+        ">
+            <table style="width: 100%; border-collapse: collapse; text-align: left; font-family: Arial, sans-serif;">
+                <thead>
+                    <tr>
+                        <th style="border-bottom: 1px solid #ddd; padding: 8px;">Parameter</th>
+                        <th style="border-bottom: 1px solid #ddd; padding: 8px;">Optimal Range</th>
+                        <th style="border-bottom: 1px solid #ddd; padding: 8px;">Intermediate Range</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="padding: 8px;">pH</td>
+                        <td style="padding: 8px;">6.0 - 7.5</td>
+                        <td style="padding: 8px;">5.5 - 8.0</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px;">Humidity (%)</td>
+                        <td style="padding: 8px;">40 - 60</td>
+                        <td style="padding: 8px;">35 - 65</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px;">Temperature (°C)</td>
+                        <td style="padding: 8px;">20 - 30</td>
+                        <td style="padding: 8px;">15 - 35</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px;">Conductivity (µS/cm)</td>
+                        <td style="padding: 8px;">1000 - 2000</td>
+                        <td style="padding: 8px;">500 - 2500</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px;">Nitrogen (mg/kg)</td>
+                        <td style="padding: 8px;">240 - 480</td>
+                        <td style="padding: 8px;">200 - 520</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px;">Phosphorus (mg/kg)</td>
+                        <td style="padding: 8px;">11 - 22</td>
+                        <td style="padding: 8px;">8 - 25</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px;">Potassium (mg/kg)</td>
+                        <td style="padding: 8px;">110 - 280</td>
+                        <td style="padding: 8px;">80 - 300</td>
+                    </tr>
+                </tbody>
+            </table>
+            <button id="close-ranges" style="
+                display: block; 
+                margin: 20px auto 0; 
+                padding: 10px 20px; 
+                border: none; 
+                background: #333; 
+                color: #fff; 
+                cursor: pointer;
+            ">Close</button>
+        </div>
+        <script>
+            const canvas = document.getElementById('greenhouse');
+            const ctx = canvas.getContext('2d');
+            const infoBox = document.getElementById('info-box');
+            const chartModal = document.getElementById('chart-modal');
+            const dataChartCanvas = document.getElementById('data-chart');
+            const closeModal = document.getElementById('close-modal');
+            let dataChart;
 
-        // Data passed from Flask
-        const injectionPoints = {{ injection_points|tojson }};
-        const historicalData = {{ historical_data|tojson }};
+            // Data passed from Flask
+            const injectionPoints = {{ injection_points|tojson }};
+            const historicalData = {{ historical_data|tojson }};
 
-        // Define ranges
-        const optimalRanges = {
-            pH: { min: 6.0, max: 7.5 },
-            humidity: { min: 40, max: 60 },
-            temperature: { min: 20, max: 30 },
-            conductivity: { min: 1000, max: 2000 },
-            nitrogen: { min: 240, max: 480 },
-            phosphorus: { min: 11, max: 22 },
-            potassium: { min: 110, max: 280 }
-        };
-
-        const intermediateRanges = {
-            pH: { min: 5.5, max: 8.0 },
-            humidity: { min: 35, max: 65 },
-            temperature: { min: 15, max: 35 },
-            conductivity: { min: 500, max: 2500 },
-            nitrogen: { min: 200, max: 520 },
-            phosphorus: { min: 8, max: 25 },
-            potassium: { min: 80, max: 300 }
-        };
-        // Function to determine the status of a value
-        function getStatus(value, optimal, intermediate) {
-            if (value < intermediate.min || value > intermediate.max) return 'Outside';
-            if (value >= optimal.min && value <= optimal.max) return 'Optimal';
-            return 'Intermediate';
-        }
-
-        // Function to calculate averages and statuses
-        function calculateReport() {
-            const report = {};
-            const parameters = Object.keys(optimalRanges);
-
-            const units = {
-                pH: '', // No unit for pH
-                humidity: '%', // Percentage
-                temperature: '°C', // Degrees Celsius
-                conductivity: 'µS/cm', // MicroSiemens per centimeter
-                nitrogen: 'mg/kg', // Milligrams per kilogram
-                phosphorus: 'mg/kg', // Milligrams per kilogram
-                potassium: 'mg/kg' // Milligrams per kilogram
+            // Define ranges
+            const optimalRanges = {
+                pH: { min: 6.0, max: 7.5 },
+                humidity: { min: 40, max: 60 },
+                temperature: { min: 20, max: 30 },
+                conductivity: { min: 1000, max: 2000 },
+                nitrogen: { min: 240, max: 480 },
+                phosphorus: { min: 11, max: 22 },
+                potassium: { min: 110, max: 280 }
             };
 
-            parameters.forEach(param => {
-                let total = 0;
-                let count = 0;
+            const intermediateRanges = {
+                pH: { min: 5.5, max: 8.0 },
+                humidity: { min: 35, max: 65 },
+                temperature: { min: 15, max: 35 },
+                conductivity: { min: 500, max: 2500 },
+                nitrogen: { min: 200, max: 520 },
+                phosphorus: { min: 8, max: 25 },
+                potassium: { min: 80, max: 300 }
+            };
+            // Function to determine the status of a value
+            function getStatus(value, optimal, intermediate) {
+                if (value < intermediate.min || value > intermediate.max) return 'Outside';
+                if (value >= optimal.min && value <= optimal.max) return 'Optimal';
+                return 'Intermediate';
+            }
 
-                injectionPoints.forEach(point => {
-                    total += point[param];
-                    count += 1;
+            // Function to calculate averages and statuses
+            function calculateReport() {
+                const report = {};
+                const parameters = Object.keys(optimalRanges);
+
+                const units = {
+                    pH: '', // No unit for pH
+                    humidity: '%', // Percentage
+                    temperature: '°C', // Degrees Celsius
+                    conductivity: 'µS/cm', // MicroSiemens per centimeter
+                    nitrogen: 'mg/kg', // Milligrams per kilogram
+                    phosphorus: 'mg/kg', // Milligrams per kilogram
+                    potassium: 'mg/kg' // Milligrams per kilogram
+                };
+
+                parameters.forEach(param => {
+                    let total = 0;
+                    let count = 0;
+
+                    injectionPoints.forEach(point => {
+                        total += point[param];
+                        count += 1;
+                    });
+
+                    const average = (total / count).toFixed(2);
+                    const status = getStatus(
+                        average,
+                        optimalRanges[param],
+                        intermediateRanges[param]
+                    );
+
+                    report[param] = {
+                        average: `${average} ${units[param]}`,
+                        status
+                    };
                 });
 
-                const average = (total / count).toFixed(2);
-                const status = getStatus(
-                    average,
-                    optimalRanges[param],
-                    intermediateRanges[param]
-                );
-
-                report[param] = {
-                    average: `${average} ${units[param]}`,
-                    status
-                };
-            });
-
-            return report;
-        }
-
-        // Function to display the report modal
-        function showReportModal() {
-            const report = calculateReport();
-            const modalContent = document.getElementById('report-content');
-            let content = '<h2>Welcome</h2><p>Today\'s Report:</p><ul>';
-
-            Object.keys(report).forEach(param => {
-                const { average, status } = report[param];
-                content += `<li><strong>${param.toUpperCase()}:</strong> ${average} (${status})</li>`;
-            });
-
-            content += '</ul>';
-            modalContent.innerHTML = content;
-
-            const modal = document.getElementById('report-modal');
-            modal.style.display = 'block';
-        }
-
-        // Close the modal when the close button is clicked
-        function closeReportModal() {
-            const modal = document.getElementById('report-modal');
-            modal.style.display = 'none';
-        }
-
-        // Call the modal on page load
-        window.onload = function () {
-            showReportModal();
-
-            // Include other onload tasks here if necessary
-        };
-
-
-
-        // Function to determine status color
-        function determineStatus(point) {
-            let outsideIntermediate = false;
-            let withinOptimal = true;
-
-            Object.keys(optimalRanges).forEach(key => {
-                const value = point[key];
-                const optimal = optimalRanges[key];
-                const intermediate = intermediateRanges[key];
-
-                if (value < intermediate.min || value > intermediate.max) {
-                    outsideIntermediate = true;
-                }
-                if (value < optimal.min || value > optimal.max) {
-                    withinOptimal = false;
-                }
-            });
-
-            if (outsideIntermediate) return 'red';
-            if (withinOptimal) return 'green';
-            return 'white';
-        }
-
-        // Draw greenhouse
-        const greenhouseWidth = canvas.width;
-        const greenhouseHeight = canvas.height;
-        const rowHeight = greenhouseHeight / 5;
-        const padding = 50;
-
-        for (let i = 0; i < 5; i++) {
-            ctx.fillStyle = i % 2 === 0 ? '#8fbf8f' : '#c2b280';
-            ctx.fillRect(0, i * rowHeight, greenhouseWidth, rowHeight);
-        }
-
-        // Draw path
-        const path = [];
-        for (let i = 0; i < 5; i++) {
-            const y = i * rowHeight + rowHeight / 2;
-            if (i % 2 === 0) {
-                path.push({ x: padding, y });
-                path.push({ x: greenhouseWidth - padding, y });
-            } else {
-                path.push({ x: greenhouseWidth - padding, y });
-                path.push({ x: padding, y });
+                return report;
             }
-        }
 
-        ctx.strokeStyle = 'yellow';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) {
-            ctx.lineTo(path[i].x, path[i].y);
-        }
-        ctx.stroke();
-        // Draw start and end points
-        ctx.fillStyle = 'gray'; // Start point
-        ctx.beginPath();
-        ctx.arc(path[0].x, path[0].y, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = 'black';
-        ctx.stroke();
+            // Function to display the report modal
+            function showReportModal() {
+                const report = calculateReport();
+                const modalContent = document.getElementById('report-content');
+                let content = '<h2>Welcome</h2><p>Today\'s Report:</p><ul>';
 
-        ctx.fillStyle = 'gray'; // End point
-        ctx.beginPath();
-        ctx.arc(path[path.length - 1].x, path[path.length - 1].y, 10, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-        // Draw injection points
-        injectionPoints.forEach((point, i) => {
-            const rowIndex = Math.floor(i / 2);
-            const y = rowIndex * rowHeight + rowHeight / 2;
-            const x = i % 2 === 0 ? padding + 120 : greenhouseWidth - padding - 120;
+                Object.keys(report).forEach(param => {
+                    const { average, status } = report[param];
+                    content += `<li><strong>${param.toUpperCase()}:</strong> ${average} (${status})</li>`;
+                });
 
-            const statusColor = determineStatus(point);
+                content += '</ul>';
+                modalContent.innerHTML = content;
 
-            ctx.fillStyle = statusColor;
+                const modal = document.getElementById('report-modal');
+                modal.style.display = 'block';
+            }
+
+            // Close the modal when the close button is clicked
+            function closeReportModal() {
+                const modal = document.getElementById('report-modal');
+                modal.style.display = 'none';
+            }
+
+            // Call the modal on page load
+            window.onload = function () {
+                showReportModal();
+
+                // Include other onload tasks here if necessary
+            };
+
+
+
+            // Function to determine status color
+            function determineStatus(point) {
+                let outsideIntermediate = false;
+                let withinOptimal = true;
+
+                Object.keys(optimalRanges).forEach(key => {
+                    const value = point[key];
+                    const optimal = optimalRanges[key];
+                    const intermediate = intermediateRanges[key];
+
+                    if (value < intermediate.min || value > intermediate.max) {
+                        outsideIntermediate = true;
+                    }
+                    if (value < optimal.min || value > optimal.max) {
+                        withinOptimal = false;
+                    }
+                });
+
+                if (outsideIntermediate) return 'red';
+                if (withinOptimal) return 'green';
+                return 'white';
+            }
+
+            // Draw greenhouse
+            const greenhouseWidth = canvas.width;
+            const greenhouseHeight = canvas.height;
+            const rowHeight = greenhouseHeight / 5;
+            const padding = 50;
+
+            for (let i = 0; i < 5; i++) {
+                ctx.fillStyle = i % 2 === 0 ? '#8fbf8f' : '#c2b280';
+                ctx.fillRect(0, i * rowHeight, greenhouseWidth, rowHeight);
+            }
+
+            // Draw path
+            const path = [];
+            for (let i = 0; i < 5; i++) {
+                const y = i * rowHeight + rowHeight / 2;
+                if (i % 2 === 0) {
+                    path.push({ x: padding, y });
+                    path.push({ x: greenhouseWidth - padding, y });
+                } else {
+                    path.push({ x: greenhouseWidth - padding, y });
+                    path.push({ x: padding, y });
+                }
+            }
+
+            ctx.strokeStyle = 'yellow';
+            ctx.lineWidth = 2;
             ctx.beginPath();
-            ctx.arc(x, y, 10, 0, Math.PI * 2);
+            ctx.moveTo(path[0].x, path[0].y);
+            for (let i = 1; i < path.length; i++) {
+                ctx.lineTo(path[i].x, path[i].y);
+            }
+            ctx.stroke();
+            // Draw start and end points
+            ctx.fillStyle = 'gray'; // Start point
+            ctx.beginPath();
+            ctx.arc(path[0].x, path[0].y, 10, 0, Math.PI * 2);
             ctx.fill();
+            ctx.strokeStyle = 'black';
             ctx.stroke();
 
-            ctx.fillStyle = 'black';
-            ctx.fillText(point.label, x - 10, y - 15);
+            ctx.fillStyle = 'gray'; // End point
+            ctx.beginPath();
+            ctx.arc(path[path.length - 1].x, path[path.length - 1].y, 10, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            // Draw injection points
+            injectionPoints.forEach((point, i) => {
+                const rowIndex = Math.floor(i / 2);
+                const y = rowIndex * rowHeight + rowHeight / 2;
+                const x = i % 2 === 0 ? padding + 120 : greenhouseWidth - padding - 120;
 
-            point.x = x;
-            point.y = y;
-        });
+                const statusColor = determineStatus(point);
 
-        function highlightOutOfRange(value, param) {
-            const optimal = optimalRanges[param];
-            const intermediate = intermediateRanges[param];
+                ctx.fillStyle = statusColor;
+                ctx.beginPath();
+                ctx.arc(x, y, 12, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
 
-            // Check if the value is out of the intermediate range
-            if (value < intermediate.min || value > intermediate.max) {
-                return 'background-color: red; color: white; padding: 2px; border-radius: 3px;';
+                ctx.fillStyle = 'black';
+                ctx.fillText(point.label, x - 10, y - 15);
+
+                point.x = x;
+                point.y = y;
+            });
+
+            function highlightOutOfRange(value, param) {
+                const optimal = optimalRanges[param];
+                const intermediate = intermediateRanges[param];
+
+                // Check if the value is out of the intermediate range
+                if (value < intermediate.min || value > intermediate.max) {
+                    return 'background-color: red; color: white; padding: 2px; border-radius: 3px;';
+                }
+
+                // Check if the value is within the intermediate range but not optimal
+                if (value < optimal.min || value > optimal.max) {
+                    return 'background-color: yellow; padding: 2px; border-radius: 3px;';
+                }
+
+                // Return no style if the value is within optimal range
+                return '';
             }
 
-            // Check if the value is within the intermediate range but not optimal
-            if (value < optimal.min || value > optimal.max) {
-                return 'background-color: yellow; padding: 2px; border-radius: 3px;';
-            }
 
-            // Return no style if the value is within optimal range
-            return '';
-        }
+            canvas.addEventListener('click', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
 
+                injectionPoints.forEach(point => {
+                    const distance = Math.sqrt(
+                        (mouseX - point.x) ** 2 + (mouseY - point.y) ** 2
+                    );
+                    if (distance < 20) {
+                        infoBox.style.display = 'block';
+                        infoBox.innerHTML = `
+                            <strong>Data for ${point.label}:</strong><br>
+                            <span class="interactive" data-type="pH" style="${highlightOutOfRange(point.pH, 'pH')}">pH: ${point.pH}</span><br>
+                            <span class="interactive" data-type="humidity" style="${highlightOutOfRange(point.humidity, 'humidity')}">Humidity: ${point.humidity}%</span><br>
+                            <span class="interactive" data-type="temperature" style="${highlightOutOfRange(point.temperature, 'temperature')}">Temperature: ${point.temperature}°C</span><br>
+                            <span class="interactive" data-type="conductivity" style="${highlightOutOfRange(point.conductivity, 'conductivity')}">Conductivity: ${point.conductivity} µS/cm</span><br>
+                            <span class="interactive" data-type="nitrogen" style="${highlightOutOfRange(point.nitrogen, 'nitrogen')}">Nitrogen: ${point.nitrogen} mg/kg</span><br>
+                            <span class="interactive" data-type="phosphorus" style="${highlightOutOfRange(point.phosphorus, 'phosphorus')}">Phosphorus: ${point.phosphorus} mg/kg</span><br>
+                            <span class="interactive" data-type="potassium" style="${highlightOutOfRange(point.potassium, 'potassium')}">Potassium: ${point.potassium} mg/kg</span>
+                        `;
 
-        canvas.addEventListener('click', (e) => {
-            const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-
-            injectionPoints.forEach(point => {
-                const distance = Math.sqrt(
-                    (mouseX - point.x) ** 2 + (mouseY - point.y) ** 2
-                );
-                if (distance < 10) {
-                    infoBox.style.display = 'block';
-                    infoBox.innerHTML = `
-                        <strong>Data for ${point.label}:</strong><br>
-                        <span class="interactive" data-type="pH" style="${highlightOutOfRange(point.pH, 'pH')}">pH: ${point.pH}</span><br>
-                        <span class="interactive" data-type="humidity" style="${highlightOutOfRange(point.humidity, 'humidity')}">Humidity: ${point.humidity}%</span><br>
-                        <span class="interactive" data-type="temperature" style="${highlightOutOfRange(point.temperature, 'temperature')}">Temperature: ${point.temperature}°C</span><br>
-                        <span class="interactive" data-type="conductivity" style="${highlightOutOfRange(point.conductivity, 'conductivity')}">Conductivity: ${point.conductivity} µS/cm</span><br>
-                        <span class="interactive" data-type="nitrogen" style="${highlightOutOfRange(point.nitrogen, 'nitrogen')}">Nitrogen: ${point.nitrogen} mg/kg</span><br>
-                        <span class="interactive" data-type="phosphorus" style="${highlightOutOfRange(point.phosphorus, 'phosphorus')}">Phosphorus: ${point.phosphorus} mg/kg</span><br>
-                        <span class="interactive" data-type="potassium" style="${highlightOutOfRange(point.potassium, 'potassium')}">Potassium: ${point.potassium} mg/kg</span>
-                    `;
-
-                    document.querySelectorAll('.interactive').forEach(element => {
-                        element.addEventListener('click', () => {
-                            const dataType = element.getAttribute('data-type');
-                            showChart(point.label, dataType);
+                        document.querySelectorAll('.interactive').forEach(element => {
+                            element.addEventListener('click', () => {
+                                const dataType = element.getAttribute('data-type');
+                                showChart(point.label, dataType);
+                            });
                         });
-                    });
-                }
+                    }
+                });
             });
-        });
-        
-        function showChart(label, type) {
-            const data = historicalData[label].map(entry => entry[type]);
-            const labels = historicalData[label].map(entry =>
-                new Date(entry.timestamp * 1000).toLocaleDateString()
-            );
+            
+            function showChart(label, type) {
+                const data = historicalData[label].map(entry => entry[type]);
+                const labels = historicalData[label].map(entry =>
+                    new Date(entry.timestamp * 1000).toLocaleDateString()
+                );
 
-            if (dataChart) dataChart.destroy();
+                if (dataChart) dataChart.destroy();
 
-            dataChart = new Chart(dataChartCanvas, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        label: `${type} values for ${label}`,
-                        data: data,
-                        borderColor: 'blue',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: true,
-                }
+                dataChart = new Chart(dataChartCanvas, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: `${type} values for ${label}`,
+                            data: data,
+                            borderColor: 'blue',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                    }
+                });
+
+                chartModal.style.display = 'block';
+            }
+
+            closeModal.addEventListener('click', () => {
+                chartModal.style.display = 'none';
             });
 
-            chartModal.style.display = 'block';
-        }
+                // Handle help button click for ranges table
+            const helpButton = document.getElementById('help-button');
+            const rangesPopup = document.getElementById('ranges-popup');
+            const closeRanges = document.getElementById('close-ranges');
 
-        closeModal.addEventListener('click', () => {
-            chartModal.style.display = 'none';
-        });
-    </script>
-</body>
+            helpButton.addEventListener('click', () => {
+                rangesPopup.style.display = 'block';
+            });
+
+            closeRanges.addEventListener('click', () => {
+                rangesPopup.style.display = 'none';
+            });
+
+        </script>
+
+    </body>
 </html>
