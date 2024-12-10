@@ -25,8 +25,8 @@
             display: none;
         }
         .info-box span.interactive {
-            color: blue;
-            text-decoration: underline;
+            color: rgb(0, 0, 0);
+            text-decoration: none;
             cursor: pointer;
         }
         #chart-modal {
@@ -68,9 +68,9 @@
     <div class="info-box" id="info-box"></div>
 
     <!-- Modal for the Report -->
-    <div id="report-modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: #fff; border: 1px solid #333; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); width: 400px; max-width: 90%; text-align: left;">
+    <div id="report-modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: #e6e6e6; border: 1px solid #333; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); width: 400px; max-width: 90%; text-align: left;">
         <div id="report-content"></div>
-        <button style="margin-top: 20px; padding: 10px 20px; border: none; background: #333; color: #fff; cursor: pointer;" onclick="closeReportModal()">Close</button>
+        <button style="margin-top: 20px; padding: 10px 20px; border: none; background: #00b95d; color: #fff; cursor: pointer;" onclick="closeReportModal()">Close</button>
     </div>
 
     <!-- Modal for data chart -->
@@ -281,7 +281,24 @@
             point.y = y;
         });
 
-        
+        function highlightOutOfRange(value, param) {
+            const optimal = optimalRanges[param];
+            const intermediate = intermediateRanges[param];
+
+            // Check if the value is out of the intermediate range
+            if (value < intermediate.min || value > intermediate.max) {
+                return 'background-color: red; color: white; padding: 2px; border-radius: 3px;';
+            }
+
+            // Check if the value is within the intermediate range but not optimal
+            if (value < optimal.min || value > optimal.max) {
+                return 'background-color: yellow; padding: 2px; border-radius: 3px;';
+            }
+
+            // Return no style if the value is within optimal range
+            return '';
+        }
+
 
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
@@ -296,13 +313,13 @@
                     infoBox.style.display = 'block';
                     infoBox.innerHTML = `
                         <strong>Data for ${point.label}:</strong><br>
-                        <span class="interactive" data-type="pH">pH: ${point.pH}</span><br>
-                        <span class="interactive" data-type="humidity">Humidity: ${point.humidity}%</span><br>
-                        <span class="interactive" data-type="temperature">Temperature: ${point.temperature}°C</span><br>
-                        <span class="interactive" data-type="conductivity">Conductivity: ${point.conductivity} µS/cm</span><br>
-                        <span class="interactive" data-type="nitrogen">Nitrogen: ${point.nitrogen} mg/kg</span><br>
-                        <span class="interactive" data-type="phosphorus">Phosphorus: ${point.phosphorus} mg/kg</span><br>
-                        <span class="interactive" data-type="potassium">Potassium: ${point.potassium} mg/kg</span>
+                        <span class="interactive" data-type="pH" style="${highlightOutOfRange(point.pH, 'pH')}">pH: ${point.pH}</span><br>
+                        <span class="interactive" data-type="humidity" style="${highlightOutOfRange(point.humidity, 'humidity')}">Humidity: ${point.humidity}%</span><br>
+                        <span class="interactive" data-type="temperature" style="${highlightOutOfRange(point.temperature, 'temperature')}">Temperature: ${point.temperature}°C</span><br>
+                        <span class="interactive" data-type="conductivity" style="${highlightOutOfRange(point.conductivity, 'conductivity')}">Conductivity: ${point.conductivity} µS/cm</span><br>
+                        <span class="interactive" data-type="nitrogen" style="${highlightOutOfRange(point.nitrogen, 'nitrogen')}">Nitrogen: ${point.nitrogen} mg/kg</span><br>
+                        <span class="interactive" data-type="phosphorus" style="${highlightOutOfRange(point.phosphorus, 'phosphorus')}">Phosphorus: ${point.phosphorus} mg/kg</span><br>
+                        <span class="interactive" data-type="potassium" style="${highlightOutOfRange(point.potassium, 'potassium')}">Potassium: ${point.potassium} mg/kg</span>
                     `;
 
                     document.querySelectorAll('.interactive').forEach(element => {
