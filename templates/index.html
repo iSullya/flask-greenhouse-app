@@ -67,6 +67,12 @@
     <canvas id="greenhouse" width="600" height="400"></canvas>
     <div class="info-box" id="info-box"></div>
 
+    <!-- Modal for the Report -->
+    <div id="report-modal" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1000; background: #fff; border: 1px solid #333; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); width: 400px; max-width: 90%; text-align: left;">
+        <div id="report-content"></div>
+        <button style="margin-top: 20px; padding: 10px 20px; border: none; background: #333; color: #fff; cursor: pointer;" onclick="closeReportModal()">Close</button>
+    </div>
+
     <!-- Modal for data chart -->
     <div id="chart-modal">
         <canvas id="data-chart" style="width: 500px; height: 200px;"></canvas>
@@ -153,25 +159,37 @@
             return report;
         }
 
-        // Function to display the report pop-up
-        function showReportPopup() {
+        // Function to display the report modal
+        function showReportModal() {
             const report = calculateReport();
-            let message = "Welcome\nToday's Report:\n\n";
+            const modalContent = document.getElementById('report-content');
+            let content = '<h2>Welcome</h2><p>Today\'s Report:</p><ul>';
 
             Object.keys(report).forEach(param => {
                 const { average, status } = report[param];
-                message += `${param.toUpperCase()}: ${average} (${status})\n`;
+                content += `<li><strong>${param.toUpperCase()}:</strong> ${average} (${status})</li>`;
             });
 
-            alert(message);
+            content += '</ul>';
+            modalContent.innerHTML = content;
+
+            const modal = document.getElementById('report-modal');
+            modal.style.display = 'block';
         }
 
-        // Call the pop-up on page load
+        // Close the modal when the close button is clicked
+        function closeReportModal() {
+            const modal = document.getElementById('report-modal');
+            modal.style.display = 'none';
+        }
+
+        // Call the modal on page load
         window.onload = function () {
-            showReportPopup();
+            showReportModal();
 
             // Include other onload tasks here if necessary
         };
+
 
 
         // Function to determine status color
