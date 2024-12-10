@@ -106,6 +106,73 @@
             phosphorus: { min: 8, max: 25 },
             potassium: { min: 80, max: 300 }
         };
+        // Function to determine the status of a value
+        function getStatus(value, optimal, intermediate) {
+            if (value < intermediate.min || value > intermediate.max) return 'Outside';
+            if (value >= optimal.min && value <= optimal.max) return 'Optimal';
+            return 'Intermediate';
+        }
+
+        // Function to calculate averages and statuses
+        function calculateReport() {
+            const report = {};
+            const parameters = Object.keys(optimalRanges);
+
+            const units = {
+                pH: '', // No unit for pH
+                humidity: '%', // Percentage
+                temperature: '°C', // Degrees Celsius
+                conductivity: 'µS/cm', // MicroSiemens per centimeter
+                nitrogen: 'mg/kg', // Milligrams per kilogram
+                phosphorus: 'mg/kg', // Milligrams per kilogram
+                potassium: 'mg/kg' // Milligrams per kilogram
+            };
+
+            parameters.forEach(param => {
+                let total = 0;
+                let count = 0;
+
+                injectionPoints.forEach(point => {
+                    total += point[param];
+                    count += 1;
+                });
+
+                const average = (total / count).toFixed(2);
+                const status = getStatus(
+                    average,
+                    optimalRanges[param],
+                    intermediateRanges[param]
+                );
+
+                report[param] = {
+                    average: `${average} ${units[param]}`,
+                    status
+                };
+            });
+
+            return report;
+        }
+
+        // Function to display the report pop-up
+        function showReportPopup() {
+            const report = calculateReport();
+            let message = "Welcome\nToday's Report:\n\n";
+
+            Object.keys(report).forEach(param => {
+                const { average, status } = report[param];
+                message += `${param.toUpperCase()}: ${average} (${status})\n`;
+            });
+
+            alert(message);
+        }
+
+        // Call the pop-up on page load
+        window.onload = function () {
+            showReportPopup();
+
+            // Include other onload tasks here if necessary
+        };
+
 
         // Function to determine status color
         function determineStatus(point) {
@@ -196,6 +263,8 @@
             point.y = y;
         });
 
+        
+
         canvas.addEventListener('click', (e) => {
             const rect = canvas.getBoundingClientRect();
             const mouseX = e.clientX - rect.left;
@@ -227,7 +296,7 @@
                 }
             });
         });
-
+        
         function showChart(label, type) {
             const data = historicalData[label].map(entry => entry[type]);
             const labels = historicalData[label].map(entry =>
